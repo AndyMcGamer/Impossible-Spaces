@@ -11,10 +11,12 @@ public enum Axis
 
 public class PortalTrigger : MonoBehaviour
 {
+    
     public int startRoom;
     public int endRoom;
 
     [SerializeField] private Axis axis;
+    [SerializeField] private bool reversed;
 
     private void Awake()
     {
@@ -24,40 +26,37 @@ public class PortalTrigger : MonoBehaviour
 
     private void OnTriggerExit(Collider other)
     {
+        
         if (other.CompareTag("Player"))
         {
             Vector3 realPos = transform.position + new Vector3(1,1,0);
             Vector3 direction = (other.transform.position - realPos).normalized;
-            Vector3 forwardDirection;
-            switch (axis)
+            var forwardDirection = axis switch
             {
-                case Axis.Red:
-                    forwardDirection = transform.right;
-                    break;
-                case Axis.Green:
-                    forwardDirection = transform.up;
-                    break;
-                case Axis.Blue:
-                    forwardDirection = transform.forward;
-                    break;
-                default:
-                    forwardDirection = transform.right;
-                    break;
-            }
+                Axis.Red => transform.right,
+                Axis.Green => transform.up,
+                Axis.Blue => transform.forward,
+                _ => transform.right,
+            };
             bool forward = Vector3.Dot(direction, forwardDirection) < 0;
+            forward = reversed ? !forward : forward;
             int stencil;
             GameObject roomOn, roomOff;
-            if (forward)
+            if (forward && PortalManager.instance.roomIndex == startRoom)
             {
-                stencil = endRoom;
+                stencil = endRoom % Constants.NUM_STENCILS;
                 roomOn = PortalManager.instance.rooms[endRoom];
                 roomOff = PortalManager.instance.rooms[startRoom];
             }
-            else
+            else if(PortalManager.instance.roomIndex == endRoom)
             {
-                stencil = startRoom;
+                stencil = startRoom % Constants.NUM_STENCILS;
                 roomOn = PortalManager.instance.rooms[startRoom];
                 roomOff = PortalManager.instance.rooms[endRoom];
+            }
+            else
+            {
+                return;
             }
             
             foreach (Transform child in roomOn.transform)
@@ -74,8 +73,8 @@ public class PortalTrigger : MonoBehaviour
                     child.gameObject.GetComponent<Collider>().enabled = false;
                 }
             }
-            
             PortalManager.instance.SetStencilMask(stencil);
+            PortalManager.instance.roomIndex = forward ? endRoom : startRoom;
         }
     }
 }

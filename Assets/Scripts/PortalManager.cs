@@ -2,19 +2,19 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering.Universal;
-using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
 public class PortalManager : MonoBehaviour
 {
     public static PortalManager instance;
     [SerializeField] private Renderer stencilMask;
-    [SerializeField] private GameObject startingRoom;
     [SerializeField] private UniversalRendererData rendererData;
     public Material[] stencils;
     public GameObject[] rooms;
     private RenderObjects depthPass;
     [SerializeField] private LayerMask depthMask;
+    [Tooltip("Set the value of this variable to be the starting room")]
+    public int roomIndex;
 
     private void Awake()
     {
@@ -28,7 +28,8 @@ public class PortalManager : MonoBehaviour
             return;
         }
         DontDestroyOnLoad(gameObject);
-        foreach (Transform child in startingRoom.transform)
+        roomIndex--;
+        foreach (Transform child in rooms[roomIndex].transform)
         {
             if (child.CompareTag("Collider"))
             {
@@ -42,16 +43,24 @@ public class PortalManager : MonoBehaviour
                 depthPass = (RenderObjects)feature;
             }
         }
-        depthMask = 1 << startingRoom.layer;
+        depthMask = 1 << rooms[roomIndex].layer;
 
         depthPass.settings.filterSettings.LayerMask = depthMask;
         depthPass.Create();
+        
     }
 
     public void SetStencilMask(int stencil)
     {
         stencilMask.material = stencils[stencil];
         depthMask = 1 << rooms[stencil].layer;
+        depthPass.settings.filterSettings.LayerMask = depthMask;
+        depthPass.Create();
+    }
+
+    private void OnApplicationQuit()
+    {
+        depthMask = 0;
         depthPass.settings.filterSettings.LayerMask = depthMask;
         depthPass.Create();
     }
